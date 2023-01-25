@@ -33,18 +33,18 @@ func CreateMark(c *gin.Context) {
 	})
 }
 
-func GetMarksByClassID(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+// func GetMarksByClassID(c *gin.Context) {
+// 	id, _ := strconv.Atoi(c.Param("id"))
 
-	errs, result := repository.GetMarksByID(database.DbConnection, id)
-	if errs != nil {
-		panic("ID tidak ditemukan")
-	}
+// 	errs, result := repository.GetMarksByID(database.DbConnection, id)
+// 	if errs != nil {
+// 		panic("ID tidak ditemukan")
+// 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"result": result,
-	})
-}
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"result": result,
+// 	})
+// }
 
 func UpdateMark(c *gin.Context) {
 	var mark structs.Mark
@@ -68,16 +68,16 @@ func UpdateMark(c *gin.Context) {
 	})
 }
 
-func DeleteMark(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+// func DeleteMark(c *gin.Context) {
+// 	id, _ := strconv.Atoi(c.Param("id"))
 
-	err := repository.DeleteMark(database.DbConnection, id)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"result": err,
-		})
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"result": "Success Delete Mark",
-	})
-}
+// 	err := repository.DeleteMark(database.DbConnection, id)
+// 	if err != nil {
+// 		c.JSON(http.StatusOK, gin.H{
+// 			"result": err,
+// 		})
+// 	}
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"result": "Success Delete Mark",
+// 	})
+// }

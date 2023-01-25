@@ -3,13 +3,12 @@ package repository
 import (
 	"database/sql"
 	"finaltask/structs"
-	"fmt"
 )
 
-func FindAccount(db *sql.DB, id int) (result []structs.Teacher, err error) {
+func FindAccount(db *sql.DB, id int) (result []structs.User, err error) {
 	sqlStatement := `
 	SELECT *
-	FROM teacher
+	FROM users
 	WHERE id = $1;
 	`
 	rows, err := db.Query(sqlStatement, id)
@@ -19,7 +18,7 @@ func FindAccount(db *sql.DB, id int) (result []structs.Teacher, err error) {
 	}
 
 	for rows.Next() {
-		var account = structs.Teacher{}
+		var account = structs.User{}
 
 		err = rows.Scan(&account.ID, &account.Phone, &account.Username, &account.Password, &account.Email, &account.Role, &account.CreatedAt, &account.UpdatedAt)
 		if err != nil {
@@ -31,12 +30,10 @@ func FindAccount(db *sql.DB, id int) (result []structs.Teacher, err error) {
 	return
 }
 
-func TeacherAuthorization(db *sql.DB, emailID string) (err error, result []structs.Teacher) {
-	fmt.Println("EMAIL", emailID)
-
+func TeacherAuthorization(db *sql.DB, emailID string) (err error, result []structs.User) {
 	sqlStatement := `
 	SELECT *
-	FROM teacher
+	FROM users
 	WHERE email = $1;
 	`
 	rows, err := db.Query(sqlStatement, emailID)
@@ -46,7 +43,7 @@ func TeacherAuthorization(db *sql.DB, emailID string) (err error, result []struc
 	}
 
 	for rows.Next() {
-		var account = structs.Teacher{}
+		var account = structs.User{}
 
 		err = rows.Scan(&account.ID, &account.Phone, &account.Username, &account.Password, &account.Email, &account.Role, &account.CreatedAt, &account.UpdatedAt)
 		if err != nil {
@@ -62,8 +59,8 @@ func TeacherAccessAuthorization(db *sql.DB, emailID string, classID int) (err er
 	sqlStatement := `
 	SELECT *
 	FROM class
-	LEFT JOIN teacher ON teacher.id = class.teacher_id
-	WHERE teacher.email = $1 AND class.id = $2;
+	LEFT JOIN users ON users.id = class.teacher_id
+	WHERE users.email = $1 AND class.id = $2;
 	`
 	_, err = db.Query(sqlStatement, emailID, classID)
 
@@ -77,8 +74,8 @@ func MemberAccessAuthorization(db *sql.DB, emailID string, classID int) (err err
 	sqlStatement := `
 	SELECT *
 	FROM member
-	LEFT JOIN student ON student.id = member.user_id
-	WHERE student.email = $1 AND member.class_id = $2;
+	LEFT JOIN user ON user.id = member.user_id
+	WHERE user.email = $1 AND member.class_id = $2;
 	`
 	_, err = db.Query(sqlStatement, emailID, classID)
 

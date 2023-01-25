@@ -2,7 +2,6 @@ package controller
 
 import (
 	"finaltask/database"
-	"finaltask/helpers"
 	"finaltask/repository"
 	"finaltask/structs"
 	"fmt"
@@ -20,7 +19,6 @@ import (
 
 func CreateClass(c *gin.Context) {
 	var class structs.Class
-	var dataFile structs.File
 
 	class.Topic = c.PostForm("topic")
 	maxMarks, _ := strconv.Atoi(c.PostForm("max_marks"))
@@ -29,31 +27,21 @@ func CreateClass(c *gin.Context) {
 
 	userData := c.MustGet("userData").(jwt.MapClaims)
 	userID := uint(userData["id"].(float64))
+	class.TeacherID = int64(userID)
 
-	repository.CreateClass(database.DbConnection, class, int(userID))
-	data, err := repository.GetAllClass(database.DbConnection)
-	lengthData := len(data)
+	_, err := repository.GetAllClass(database.DbConnection)
 
 	if err != nil {
 		panic(err)
 	}
 
-	contentType := helpers.GetContentType(c)
 	file, header, _ := c.Request.FormFile("file_url")
 
 	if header != nil {
 		dt := time.Now()
-		classID := data[lengthData-1].ID
-		dataFile.ClassID = classID
 
 		currentTime := dt.Format("01-02-2006")
 		timeInSecond := dt.Format("15-04-05")
-
-		if contentType == appJson {
-			c.ShouldBindJSON(&dataFile)
-		} else {
-			c.ShouldBind(&dataFile)
-		}
 
 		// GET Format File
 		sourceFile := header.Filename
@@ -63,19 +51,11 @@ func CreateClass(c *gin.Context) {
 		fmt.Println("formatFile", formatFile)
 
 		filename := strconv.FormatUint(uint64(userID), 10) + "_" + currentTime + "_" + timeInSecond + "." + formatFile
-		fmt.Println("filename", filename)
+
 		out, err := os.Create("assets/" + filename)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		dataFile.Filename = filename
-		dataFile.CreatedAt = dt
-		dataFile.UpdatedAt = dt
-		dataFile.UserID = int64(userID)
-		dataFile.ClassID = int64(classID)
-
-		// err = db.Debug().Create(&dataFile).Error
 
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -85,18 +65,28 @@ func CreateClass(c *gin.Context) {
 			return
 		}
 
-		repository.CreateFiles(database.DbConnection, dataFile)
 		defer out.Close()
 		_, err = io.Copy(out, file)
 		if err != nil {
 			log.Fatal(err)
 		}
 
+		class.Filename = filename
+
+		repository.CreateClass(database.DbConnection, class)
+
 		c.JSON(http.StatusCreated, gin.H{
-			"message": "Success Create Class",
-			"result":  dataFile,
+			"message":    "Success Create Class",
+			"data class": class,
+			"file":       class.Filename,
 		})
+
+		return
 	}
+
+	class.Filename = " "
+	// fmt.Println("CCCCCCCC", class)
+	repository.CreateClass(database.DbConnection, class)
 
 	c.JSON(http.StatusOK, gin.H{
 		"result": "Success Create Class",
@@ -126,7 +116,7 @@ func GetAllClassByTeacherID(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func GetClassByClassID(c *gin.Context) {
+func TeacherGetClassByClassID(c *gin.Context) {
 	var (
 		result gin.H
 	)
@@ -134,7 +124,17 @@ func GetClassByClassID(c *gin.Context) {
 	//id kelas
 	id, _ := strconv.Atoi(c.Param("id"))
 
-	class, err := repository.GetClassByClassID(database.DbConnection, id)
+	// userData := c.MustGet("userData").(jwt.MapClaims)
+	// userID := uint(userData["id"].(float64))
+
+	err, class, members := repository.TeacherGetClassByClassID(database.DbConnection, id)
+	if err != nil {
+		result = gin.H{
+			"result": err,
+		}
+	}
+
+	// fmt.Println("MMMMMMMM", err)
 
 	if err != nil {
 		result = gin.H{
@@ -142,30 +142,17 @@ func GetClassByClassID(c *gin.Context) {
 		}
 	} else {
 		result = gin.H{
-			"result": class,
+			"data class": class,
+			"member":     members,
 		}
 	}
+	fmt.Println("LLLLL", result)
 
 	c.JSON(http.StatusOK, result)
 }
 
-// func GetClassByID(c *gin.Context) {
-// 	id, _ := strconv.Atoi(c.Param("id"))
-
-// 	errs, result := repository.GetClassByID(database.DbConnection, id)
-// 	if errs != nil {
-// 		panic("ID tidak ditemukan")
-// 	}
-
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"result": result,
-// 	})
-// }
-
 func UpdateClassByClassID(c *gin.Context) {
 	var class structs.Class
-	var dataFile structs.File
-
 	class.Topic = c.PostForm("topic")
 	maxMarks, _ := strconv.Atoi(c.PostForm("max_marks"))
 	class.MaxMarks = int64(maxMarks)
@@ -178,11 +165,6 @@ func UpdateClassByClassID(c *gin.Context) {
 
 	class.ID = int64(id)
 
-	err := repository.UpdateClass(database.DbConnection, class)
-	if err != nil {
-		panic(err)
-	}
-	contentType := helpers.GetContentType(c)
 	file, header, _ := c.Request.FormFile("file_url")
 
 	if header != nil {
@@ -192,12 +174,6 @@ func UpdateClassByClassID(c *gin.Context) {
 		currentTime := dt.Format("01-02-2006")
 		timeInSecond := dt.Format("15-04-05")
 
-		if contentType == appJson {
-			c.ShouldBindJSON(&dataFile)
-		} else {
-			c.ShouldBind(&dataFile)
-		}
-
 		// GET Format File
 		sourceFile := header.Filename
 		splitedFile := strings.Split(sourceFile, ".")
@@ -206,21 +182,13 @@ func UpdateClassByClassID(c *gin.Context) {
 		fmt.Println("formatFile", formatFile)
 
 		filename := strconv.FormatUint(uint64(userID), 10) + "_" + currentTime + "_" + timeInSecond + "." + formatFile
-		fmt.Println("filename", filename)
 		out, err := os.Create("assets/" + filename)
-		fmt.Println("444444")
 
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"result": err,
 			})
 		}
-
-		dataFile.Filename = filename
-		dataFile.CreatedAt = dt
-		dataFile.UpdatedAt = dt
-		dataFile.UserID = int64(userID)
-		dataFile.ClassID = int64(id)
 
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -230,10 +198,8 @@ func UpdateClassByClassID(c *gin.Context) {
 			return
 		}
 
-		repository.UpdateFiles(database.DbConnection, dataFile, id)
 		defer out.Close()
 		_, err = io.Copy(out, file)
-		fmt.Println("hhhhhh")
 
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
@@ -241,12 +207,16 @@ func UpdateClassByClassID(c *gin.Context) {
 			})
 		}
 
-		fmt.Println("llllll")
+		class.Filename = filename
+
+		repository.UpdateClass(database.DbConnection, class)
+
 		c.JSON(http.StatusCreated, gin.H{
-			"message":   "Success Update Class",
-			"data file": dataFile,
+			"message": "Success Update Class",
 		})
 	}
+
+	repository.UpdateClass(database.DbConnection, class)
 
 	c.JSON(http.StatusOK, gin.H{
 		"result": "Success Update Class",
@@ -263,5 +233,161 @@ func DeleteClass(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"result": "Success Delete class",
+	})
+}
+
+func StudentGetAllClassByStudentID(c *gin.Context) {
+	var (
+		result gin.H
+	)
+
+	userData := c.MustGet("userData").(jwt.MapClaims)
+	userID := uint(userData["id"].(float64))
+
+	_, err := repository.FindAccount(database.DbConnection, int(userID))
+
+	if err != nil {
+		result = gin.H{
+			"result": "ID Not Found",
+		}
+	}
+
+	class, err := repository.StudentGetAllClassByStudentID(database.DbConnection, int(userID))
+
+	if err != nil {
+		result = gin.H{
+			"result": err,
+		}
+	} else {
+		result = gin.H{
+			"result": class,
+		}
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func StudentPostFileByClassID(c *gin.Context) {
+	var dataFile structs.File
+	// db := database.GetDB()
+	userData := c.MustGet("userData").(jwt.MapClaims)
+	userID := uint(userData["id"].(float64))
+	dt := time.Now()
+
+	classID, _ := strconv.Atoi(c.Param("id"))
+
+	currentTime := dt.Format("01-02-2006")
+	timeInSecond := dt.Format("15-04-05")
+
+	file, header, _ := c.Request.FormFile("file_url")
+
+	// GET Format File
+	sourceFile := header.Filename
+	splitedFile := strings.Split(sourceFile, ".")
+	formatFile := splitedFile[1]
+	fmt.Println("sourceFile", sourceFile)
+	fmt.Println("formatFile", formatFile)
+
+	filename := strconv.FormatUint(uint64(userID), 10) + "_" + currentTime + "_" + timeInSecond + "." + formatFile
+	fmt.Println("filename", filename)
+	out, err := os.Create("assets/" + filename)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dataFile.Filename = filename
+	dataFile.CreatedAt = dt
+	dataFile.UpdatedAt = dt
+	dataFile.UserID = int64(userID)
+	dataFile.ClassID = int64(classID)
+
+	// err = db.Debug().Create(&dataFile).Error
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"err":     "Bad Request",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	repository.CreateFiles(database.DbConnection, dataFile)
+
+	defer out.Close()
+	_, err = io.Copy(out, file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c.JSON(http.StatusCreated, dataFile)
+}
+
+func StudentUpdateFileByID(c *gin.Context) {
+	var dataFile structs.File
+	// db := database.GetDB()
+	userData := c.MustGet("userData").(jwt.MapClaims)
+	userID := uint(userData["id"].(float64))
+	dt := time.Now()
+
+	classID, _ := strconv.Atoi(c.Param("id"))
+	fileID, _ := strconv.Atoi(c.Param("fileid"))
+
+	currentTime := dt.Format("01-02-2006")
+	timeInSecond := dt.Format("15-04-05")
+
+	file, header, _ := c.Request.FormFile("file_url")
+
+	// GET Format File
+	sourceFile := header.Filename
+	splitedFile := strings.Split(sourceFile, ".")
+	formatFile := splitedFile[1]
+
+	filename := strconv.FormatUint(uint64(userID), 10) + "_" + currentTime + "_" + timeInSecond + "." + formatFile
+	fmt.Println("filename", filename)
+	out, err := os.Create("assets/" + filename)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dataFile.Filename = filename
+	dataFile.CreatedAt = dt
+	dataFile.UpdatedAt = dt
+	dataFile.UserID = int64(userID)
+	dataFile.ClassID = int64(classID)
+
+	// err = db.Debug().Create(&dataFile).Error
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"err":     "Bad Request",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	repository.UpdateFiles(database.DbConnection, dataFile, classID, fileID)
+
+	defer out.Close()
+	_, err = io.Copy(out, file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c.JSON(http.StatusCreated, dataFile)
+}
+
+func StudentDeleteFileByID(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	fileId, _ := strconv.Atoi(c.Param("fileid"))
+
+	err := repository.DeleteFile(database.DbConnection, id, fileId)
+	if err != nil {
+		panic(err)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"result": "Success Delete File",
 	})
 }

@@ -11,25 +11,26 @@ import (
 func StartApp() *gin.Engine {
 	router := gin.Default()
 
-	//teacher controller
-	teacherRouter := router.Group("/teacher")
+	//user controller
+	userRouter := router.Group("/user")
 	{
-		teacherRouter.POST("/register", controller.CreateTeacher)
-		teacherRouter.POST("/login", controller.LoginTeacher)
-		teacherRouter.Use(middleware.Authentication())
-		teacherRouter.PUT("/update", middleware.UserAuthorization(), controller.UpdateTeacher)
-		teacherRouter.DELETE("/delete", middleware.UserAuthorization(), controller.DeleteTeacher)
+		userRouter.POST("/register", controller.CreateUser)
+		userRouter.POST("/login", controller.LoginUser)
+		userRouter.Use(middleware.Authentication())
+		userRouter.PUT("/update", middleware.UserAuthorization(), controller.UpdateUser)
+		userRouter.DELETE("/delete", middleware.UserAuthorization(), controller.DeleteUser)
 	}
 
-	//student controller
-	studentRouter := router.Group("/student")
-	{
-		studentRouter.POST("/register", controller.CreateStudent)
-		studentRouter.POST("/login", controller.LoginStudent)
-		studentRouter.Use(middleware.Authentication())
-		studentRouter.PUT("/update", middleware.UserAuthorization(), controller.UpdateStudent)
-		studentRouter.DELETE("/delete", middleware.UserAuthorization(), controller.DeleteStudent)
-	}
+	// //student controller
+	// studentRouter := router.Group("/student")
+	// {
+	// 	studentRouter.POST("/register", controller.CreateStudent)
+	// 	studentRouter.POST("/login", controller.LoginStudent)
+	// 	studentRouter.Use(middleware.Authentication())
+	// 	studentRouter.PUT("/update", middleware.UserAuthorization(), controller.UpdateStudent)
+	// 	studentRouter.DELETE("/delete", middleware.UserAuthorization(), controller.DeleteStudent)
+	// 	// CLASS SECTION
+	// }
 
 	//class controller
 	classRouter := router.Group("/class")
@@ -38,19 +39,25 @@ func StartApp() *gin.Engine {
 		classRouter.POST("/", middleware.TeacherAuthorization(), controller.CreateClass)
 		router.StaticFS("/upload", http.Dir("assets"))
 		classRouter.GET("/", middleware.TeacherAuthorization(), controller.GetAllClassByTeacherID)
-		classRouter.GET("/:id", middleware.TeacherAuthorization(), middleware.TeacherAccessAuthorization(), controller.GetClassByClassID)
+		classRouter.GET("/:id", middleware.TeacherAuthorization(), middleware.TeacherAccessAuthorization(), controller.TeacherGetClassByClassID)
 		classRouter.PUT("/:id", middleware.TeacherAuthorization(), middleware.TeacherAccessAuthorization(), controller.UpdateClassByClassID)
 		classRouter.DELETE("/:id", middleware.TeacherAuthorization(), controller.DeleteClass)
+
+		// //STUDENT  CLASS
+		classRouter.GET("/student/", middleware.StudentAuthorization(), controller.StudentGetAllClassByStudentID)
+		classRouter.POST("/:id/student/", middleware.StudentAuthorization(), middleware.MemberAuthorization(), controller.StudentPostFileByClassID)
+		classRouter.PUT("/:id/student/:fileid", middleware.StudentAuthorization(), middleware.MemberAuthorization(), controller.StudentUpdateFileByID)
+		classRouter.DELETE("/:id/student/:fileid", middleware.StudentAuthorization(), middleware.MemberAuthorization(), controller.StudentDeleteFileByID)
 	}
 
 	//marks controller
 	markRouter := router.Group("/marks")
 	{
-		markRouter.GET("/:id", controller.GetMarksByClassID)
+		// markRouter.GET("/:id", controller.GetMarksByClassID)
 		markRouter.Use(middleware.Authentication())
-		markRouter.POST("/", middleware.TeacherAuthorization(), middleware.TeacherAccessAuthorization(), controller.CreateMark)
-		markRouter.PUT("/:id", middleware.TeacherAuthorization(), controller.UpdateMark)
-		markRouter.DELETE("/:id", middleware.TeacherAuthorization(), controller.DeleteMark)
+		markRouter.POST("/:id", middleware.TeacherAuthorization(), middleware.TeacherAccessAuthorization(), controller.CreateMark)
+		markRouter.PUT("/:id", middleware.TeacherAuthorization(), middleware.TeacherAccessAuthorization(), controller.UpdateMark)
+		// markRouter.DELETE("/:id", middleware.TeacherAuthorization(), controller.DeleteMark)
 	}
 
 	//member controller
@@ -58,13 +65,6 @@ func StartApp() *gin.Engine {
 	{
 		memberRouter.POST("/", controller.CreateMember)
 		memberRouter.DELETE("/:id", controller.DeleteMember)
-	}
-
-	//file controller
-	fileRouter := router.Group("/file")
-	{
-		fileRouter.Use(middleware.Authentication())
-		fileRouter.POST("/:id", middleware.MemberAuthorization(), controller.CreatFile)
 	}
 
 	return router

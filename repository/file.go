@@ -21,12 +21,19 @@ func CreateFiles(db *sql.DB, file structs.File) (err error) {
 	return
 }
 
-func UpdateFiles(db *sql.DB, file structs.File, id int) (err error) {
-	sqlStatement := "UPDATE files SET filename=$1, updated_at=$2 WHERE class_id=$3"
+func UpdateFiles(db *sql.DB, file structs.File, id int, fileId int) (err error) {
+	sqlStatement := "UPDATE files SET filename=$1, updated_at=$2 WHERE class_id=$3 AND id = $4"
 
-	errs := db.QueryRow(sqlStatement, file.Filename, time.Now(), id)
+	errs := db.QueryRow(sqlStatement, file.Filename, time.Now(), id, fileId)
 
 	return errs.Err()
 }
 
-// func GetFileByID(db *sql.DB, id int) {}
+func DeleteFile(db *sql.DB, id int, fileId int) (err error) {
+	sql := `
+	DELETE FROM files WHERE id=$1 AND class_id=$2;
+	`
+	errs := db.QueryRow(sql, fileId, id)
+
+	return errs.Err()
+}

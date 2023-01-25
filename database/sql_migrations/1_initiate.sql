@@ -8,6 +8,7 @@ CREATE TABLE class
     max_marks INTEGER,
     teacher_id INTEGER,
     description VARCHAR(255),
+    filename VARCHAR(255),
     created_at DATE,
     updated_at DATE
 )

@@ -3,7 +3,6 @@ package middleware
 import (
 	"finaltask/database"
 	"finaltask/repository"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -45,7 +44,6 @@ func TeacherAuthorization() gin.HandlerFunc {
 		emailID := userData["email"].(string)
 
 		err, data := repository.TeacherAuthorization(database.DbConnection, emailID)
-
 		if err != nil || len(data) == 0 {
 			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
 				"error":   "Data not found",
@@ -55,7 +53,6 @@ func TeacherAuthorization() gin.HandlerFunc {
 		}
 
 		if data[0].Role != "teacher" {
-			fmt.Println("DDDDDDDDDd")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   "Unauthorized",
 				"message": "Only Teacher Can Make a class",
@@ -88,6 +85,33 @@ func TeacherAccessAuthorization() gin.HandlerFunc {
 	}
 }
 
+func StudentAuthorization() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userData := c.MustGet("userData").(jwt.MapClaims)
+		emailID := userData["email"].(string)
+
+		err, data := repository.TeacherAuthorization(database.DbConnection, emailID)
+
+		if err != nil || len(data) == 0 {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+				"error":   "Data not found",
+				"message": "data doesn't exist",
+			})
+			return
+		}
+
+		if data[0].Role != "student" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error":   "Unauthorized",
+				"message": "Only Teacher Can Make a class",
+			})
+			return
+		}
+
+		c.Next()
+	}
+}
+
 func MemberAuthorization() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		//id kelas
@@ -101,7 +125,7 @@ func MemberAuthorization() gin.HandlerFunc {
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
 				"error":   "Data not found",
-				"message": "data doesn't exist",
+				"message": "You are permitted in this class",
 			})
 			return
 		}

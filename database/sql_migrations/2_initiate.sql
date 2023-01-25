@@ -1,7 +1,7 @@
 -- +migrate Up
 -- +migrate StatementBegin
 
-CREATE TABLE student
+CREATE TABLE users
 (
     id SERIAL PRIMARY KEY,
     phone BIGINT UNIQUE,

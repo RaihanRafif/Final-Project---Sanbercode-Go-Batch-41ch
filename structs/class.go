@@ -8,8 +8,14 @@ type Class struct {
 	MaxMarks    int64     `json:"max_marks"`
 	TeacherID   int64     `json:"teacher_id"`
 	Description string    `json:"description"`
+	Filename    string    `json:"filename"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type CustomClass struct {
+	Class    Class
+	Filename string `json:"filename"`
 }
 
 // type GetClassByClassID struct {
@@ -40,7 +46,5 @@ type GetClassByClassID struct {
 	Topic       string `json:"topic"`
 	MaxMarks    int64  `json:"max_marks"`
 	Description string `json:"description"`
-	Phone       int64  `json:"phone"`
-	Username    string `json:"username"`
 	Filename    string `json:"filename"`
 }
